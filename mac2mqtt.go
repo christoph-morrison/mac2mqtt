@@ -19,10 +19,11 @@ import (
 var hostname string
 
 type config struct {
-	Ip       string `yaml:"mqtt_ip"`
-	Port     string `yaml:"mqtt_port"`
-	User     string `yaml:"mqtt_user"`
-	Password string `yaml:"mqtt_password"`
+	Ip       	string `yaml:"mqtt_ip"`
+	Port     	string `yaml:"mqtt_port"`
+	User     	string `yaml:"mqtt_user"`
+	Password 	string `yaml:"mqtt_password"`
+	BaseTopic 	strinc `yaml:"mqtt_base_topic"`
 }
 
 func (c *config) getConfig() *config {
@@ -51,6 +52,10 @@ func (c *config) getConfig() *config {
 
 	if c.Password == "" {
 		log.Fatal("Must specify mqtt_password in mac2mqtt.yaml")
+	}
+	
+	if c.BaseTopic == "" {
+		log.Fatal("No MQTT base topic set")
 	}
 
 	return c
@@ -192,7 +197,7 @@ func getMQTTClient(ip, port, user, password string) mqtt.Client {
 }
 
 func getTopicPrefix() string {
-	return "mac2mqtt/" + hostname
+	return BaseTopic + "/" + hostname
 }
 
 func listen(client mqtt.Client, topic string) {
