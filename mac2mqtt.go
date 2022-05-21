@@ -17,13 +17,14 @@ import (
 )
 
 var hostname string
+var basetopic string
 
 type config struct {
 	Ip       	string `yaml:"mqtt_ip"`
 	Port     	string `yaml:"mqtt_port"`
 	User     	string `yaml:"mqtt_user"`
 	Password 	string `yaml:"mqtt_password"`
-	BaseTopic 	strinc `yaml:"mqtt_base_topic"`
+	BaseTopic 	string `yaml:"mqtt_base_topic"`
 }
 
 func (c *config) getConfig() *config {
@@ -306,6 +307,7 @@ func main() {
 	var wg sync.WaitGroup
 
 	hostname = getHostname()
+	basetopic = c.BaseTopic
 	mqttClient := getMQTTClient(c.Ip, c.Port, c.User, c.Password)
 
 	volumeTicker := time.NewTicker(2 * time.Second)
