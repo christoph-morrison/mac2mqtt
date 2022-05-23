@@ -1,0 +1,4 @@
+/mac2mqtt
+go.mod
+go.sum
+mac2mqtt.yaml

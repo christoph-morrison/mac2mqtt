@@ -15,6 +15,11 @@ You can send topics to:
  * put computer to sleep
  * shutdown computer
  * turn off display
+ * logs you out
+
+## Building
+
+Use `build.sh` for creating the binary. It takes care of the libraries and compiling.
 
 ## Running
 
@@ -23,7 +28,7 @@ To run this program you need to put 2 files in a directory (`/Users/USERNAME/mac
     mac2mqtt
     mac2mqtt.yaml
 
-Edit `mac2mqtt.yaml` (the sample file is in this repository), make binary executable (`chmod +x mac2mqtt`) and run `./mac2mqtt`:
+Edit `mac2mqtt.yaml` (the sample file `mac2mqtt.yaml.sample` is in this repository), make binary executable (`chmod +x mac2mqtt`) and run `./mac2mqtt`:
 
     $ ./mac2mqtt
     2021/04/12 10:37:28 Started
@@ -169,16 +174,16 @@ views:
 
 ## MQTT topics structure
 
-Program is working with several MQTT topics. All topix are prefixed with `mac2mqtt` + `COMPUTER_NAME`.
-For examaple, topic with current volume on my machine is `mac2mqtt/bessarabov-osx/status/volume`
+The program is working with several MQTT topics. All topix are prefixed with the `mqtt_base_topic` from your `mac2mqtt.yaml` + `COMPUTER_NAME`.
+Setting the `mqtt_base_topic` to `test/mac2mqtt` and the computer hostname is `WOPR`, the topic will be `test/mac2mqtt/WOPR`.
 
-`mac2mqtt` send info to the topics `mac2mqtt/COMPUTER_NAME/status/#` and listen for commands in topics
-`mac2mqtt/COMPUTER_NAME/command/#`.
+`mac2mqtt` send info to the topics `PREFIX/COMPUTER_NAME/status/#` and listen for commands in topics
+`PREFIX/COMPUTER_NAME/command/#`.
 
 ### PREFIX + `/status/alive`
 
 There can be `true` of `false` in this topic. If `mac2mqtt` is connected to MQTT server there is `true`.
-If `mac2mqtt` is disconnected from MQTT there is `false`. This is the standard MQTT thing called Last Will and Testament.
+If `mac2mqtt` is disconnected from MQTT there is `false`. This is the standard MQTT thing called Last Will and Testament (LWT).
 
 ### PREFIX + `/status/volume`
 
@@ -221,3 +226,8 @@ Sending some other value but `shutdown` will do nothing.
 ### PREFIX + `/command/displaysleep`
 
 You can send string `displaysleep` to this topic. It will turn off display. Sending some other value will do nothing.
+
+
+### PREFIX + `/command/afk`
+
+Lock the screen by sending `afk` to this topic.

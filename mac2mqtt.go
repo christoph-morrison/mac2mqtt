@@ -47,16 +47,12 @@ func (c *config) getConfig() *config {
 		log.Fatal("Must specify mqtt_port in mac2mqtt.yaml")
 	}
 
-	if c.User == "" {
-		log.Fatal("Must specify mqtt_user in mac2mqtt.yaml")
+	if c.BaseTopic == "" {
+		log.Fatal("No MQTT base topic set, set mqtt_base_topic in mac2mqtt.yaml")
 	}
 
 	if c.Password == "" {
-		log.Fatal("Must specify mqtt_password in mac2mqtt.yaml")
-	}
-	
-	if c.BaseTopic == "" {
-		log.Fatal("No MQTT base topic set")
+	    log.Print("No password for MQTT used, consider to use username and password for security reasons.")
 	}
 
 	return c
@@ -159,6 +155,10 @@ func commandShutdown() {
 
 }
 
+func commandAfk() {
+    runCommand("/usr/bin/osascript", "-e", "tell app \"System Events\" to keystroke \"q\" using {command down, control down}")
+}
+
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	log.Printf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
 }
@@ -198,7 +198,7 @@ func getMQTTClient(ip, port, user, password string) mqtt.Client {
 }
 
 func getTopicPrefix() string {
-	return BaseTopic + "/" + hostname
+	return basetopic + "/" + hostname
 }
 
 func listen(client mqtt.Client, topic string) {
@@ -206,60 +206,52 @@ func listen(client mqtt.Client, topic string) {
 	token := client.Subscribe(topic, 0, func(client mqtt.Client, msg mqtt.Message) {
 
 		if msg.Topic() == getTopicPrefix()+"/command/volume" {
-
 			i, err := strconv.Atoi(string(msg.Payload()))
 			if err == nil && i >= 0 && i <= 100 {
-
 				setVolume(i)
-
 				updateVolume(client)
 				updateMute(client)
 
 			} else {
 				log.Println("Incorrect value")
 			}
-
 		}
 
 		if msg.Topic() == getTopicPrefix()+"/command/mute" {
-
 			b, err := strconv.ParseBool(string(msg.Payload()))
 			if err == nil {
 				setMute(b)
-
 				updateVolume(client)
 				updateMute(client)
 
 			} else {
 				log.Println("Incorrect value")
 			}
-
 		}
 
 		if msg.Topic() == getTopicPrefix()+"/command/sleep" {
-
 			if string(msg.Payload()) == "sleep" {
 				commandSleep()
 			}
-
 		}
 
 		if msg.Topic() == getTopicPrefix()+"/command/displaysleep" {
-
 			if string(msg.Payload()) == "displaysleep" {
 				commandDisplaySleep()
 			}
-
 		}
 
 		if msg.Topic() == getTopicPrefix()+"/command/shutdown" {
-
 			if string(msg.Payload()) == "shutdown" {
 				commandShutdown()
 			}
-
 		}
 
+        if msg.Topic() == getTopicPrefix()+"/command/afk" {
+            if string(msg.Payload()) == "afk" {
+                commandAfk()
+            }
+        }
 	})
 
 	token.Wait()
