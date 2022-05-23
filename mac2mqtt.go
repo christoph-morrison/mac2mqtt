@@ -205,6 +205,8 @@ func listen(client mqtt.Client, topic string) {
 
 	token := client.Subscribe(topic, 0, func(client mqtt.Client, msg mqtt.Message) {
 
+	    log.Printf( "Message received on topic '%s' with payload '%s'", msg.Topic(), msg.Payload() )
+
 		if msg.Topic() == getTopicPrefix()+"/command/volume" {
 			i, err := strconv.Atoi(string(msg.Payload()))
 			if err == nil && i >= 0 && i <= 100 {
