@@ -20,7 +20,7 @@ import (
 var hostname string
 var basetopic string
 var debug bool
-var config_file string
+var config_file string = "mac2mqtt.yml"
 
 type config struct {
 	Ip       	string `yaml:"mqtt_ip"`
@@ -55,7 +55,7 @@ func (c *config) getConfig(path string) *config {
 		log.Fatal("No MQTT base topic set, set mqtt_base_topic in mac2mqtt.yaml")
 	}
 
-	if c.Password == "" {
+	if c.Password == "" && debug {
 	    log.Print("No password for MQTT used, consider to use username and password for security reasons.")
 	}
 
@@ -122,10 +122,17 @@ func getCurrentVolume() int {
 func runCommand(name string, arg ...string) {
 	cmd := exec.Command(name, arg...)
 
-	_, err := cmd.Output()
-	if err != nil {
-		log.Fatal(err)
-	}
+	if (debug) {log.Printf("Executing command: '%s'\n", cmd)}
+
+	o, err := cmd.Output()
+
+	if (debug)  {
+	    log.Printf("Command output: '%s'\n", o)
+    }
+
+    if (err != nil) {
+        log.Fatalln(err)
+    }
 }
 
 // from 0 to 100
@@ -160,7 +167,7 @@ func commandShutdown() {
 }
 
 func commandAfk() {
-    runCommand("/usr/bin/osascript", "-e", "tell app \"System Events\" to keystroke \"q\" using {command down, control down}")
+    commandDisplaySleep()
 }
 
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
@@ -168,12 +175,14 @@ var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Me
 }
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
-	log.Println("Connected to MQTT")
+    log.Println("Connected to MQTT")
 
 	token := client.Publish(getTopicPrefix()+"/status/alive", 0, true, "true")
 	token.Wait()
 
-	log.Println("Sending 'true' to topic: " + getTopicPrefix() + "/status/alive")
+    if (debug) {
+        log.Println("Sending 'true' to topic: " + getTopicPrefix() + "/status/alive")
+    }
 
 	listen(client, getTopicPrefix()+"/command/#")
 }
@@ -202,14 +211,16 @@ func getMQTTClient(ip, port, user, password string) mqtt.Client {
 }
 
 func getTopicPrefix() string {
-	return basetopic + "/" + hostname
+	return basetopic
 }
 
 func listen(client mqtt.Client, topic string) {
 
 	token := client.Subscribe(topic, 0, func(client mqtt.Client, msg mqtt.Message) {
 
-	    log.Printf( "Message received on topic '%s' with payload '%s'", msg.Topic(), msg.Payload() )
+	    if (debug) {
+	        log.Printf( "Message received on topic '%s' with payload '%s'", msg.Topic(), msg.Payload() )
+        }
 
 		if msg.Topic() == getTopicPrefix()+"/command/volume" {
 			i, err := strconv.Atoi(string(msg.Payload()))
@@ -236,27 +247,19 @@ func listen(client mqtt.Client, topic string) {
 		}
 
 		if msg.Topic() == getTopicPrefix()+"/command/sleep" {
-			if string(msg.Payload()) == "sleep" {
-				commandSleep()
-			}
-		}
+            commandSleep()
+        }
 
-		if msg.Topic() == getTopicPrefix()+"/command/displaysleep" {
-			if string(msg.Payload()) == "displaysleep" {
-				commandDisplaySleep()
-			}
-		}
+        if msg.Topic() == getTopicPrefix()+"/command/displaysleep" {
+            commandDisplaySleep()
+        }
 
 		if msg.Topic() == getTopicPrefix()+"/command/shutdown" {
-			if string(msg.Payload()) == "shutdown" {
-				commandShutdown()
-			}
-		}
+            commandShutdown()
+        }
 
         if msg.Topic() == getTopicPrefix()+"/command/afk" {
-            if string(msg.Payload()) == "afk" {
-                commandAfk()
-            }
+            commandAfk()
         }
 	})
 
@@ -280,14 +283,13 @@ func getBatteryChargePercent() string {
 
 	output := getCommandOutput("/usr/bin/pmset", "-g", "batt")
 
-	// $ /usr/bin/pmset -g batt
-	// Now drawing from 'Battery Power'
-	//  -InternalBattery-0 (id=4653155)        100%; discharging; 20:00 remaining present: true
+    matches_mains, _ := regexp.MatchString(".*AC.Power.*", output)
+    if (matches_mains) {
+        return "mains"
+    }
 
-	r := regexp.MustCompile(`(\d+)%`)
-	percent := r.FindStringSubmatch(output)[1]
-
-	return percent
+    rPercent := regexp.MustCompile(`(\d+)%`)
+	return rPercent.FindStringSubmatch(output)[1]
 }
 
 func updateBattery(client mqtt.Client) {
