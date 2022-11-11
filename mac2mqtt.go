@@ -12,12 +12,15 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"flag"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 var hostname string
 var basetopic string
+var debug bool
+var config_file string
 
 type config struct {
 	Ip       	string `yaml:"mqtt_ip"`
@@ -27,9 +30,10 @@ type config struct {
 	BaseTopic 	string `yaml:"mqtt_base_topic"`
 }
 
-func (c *config) getConfig() *config {
+func (c *config) getConfig(path string) *config {
 
-	configContent, err := ioutil.ReadFile("mac2mqtt.yaml")
+	configContent, err := ioutil.ReadFile(path)
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -295,8 +299,18 @@ func main() {
 
 	log.Println("Started")
 
+    // parse command line arguments
+    flag.StringVar(&config_file, "c", "./mac2mqtt.yml", "Path to configuration file, defaults to ./mac2mqtt.yml")
+    flag.BoolVar(&debug, "d", false, "Print debug output, default false")
+    flag.Parse()
+
+    if (debug) {
+        log.Println("Printing debug information")
+        log.Println("Using config file", config_file )
+    }
+
 	var c config
-	c.getConfig()
+	c.getConfig(config_file)
 
 	var wg sync.WaitGroup
 

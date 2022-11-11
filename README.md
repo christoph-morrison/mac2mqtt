@@ -15,55 +15,55 @@ You can send topics to:
  * put computer to sleep
  * shutdown computer
  * turn off display
- * logs you out
 
 ## Building
 
-Use `build.sh` for creating the binary. It takes care of the libraries and compiling.
+Use `make` for creating the binary. It takes care of the libraries and compiling, but not the installation.
 
-## Running
+## Installing the binary
 
-To run this program you need to put 2 files in a directory (`/Users/USERNAME/mac2mqtt/`):
+After building, copy the binary to a location of your choice, for example to your home directory
 
-    mac2mqtt
-    mac2mqtt.yaml
+    cp mac2mqtt $HOME/
 
-Edit `mac2mqtt.yaml` (the sample file `mac2mqtt.yaml.sample` is in this repository), make binary executable (`chmod +x mac2mqtt`) and run `./mac2mqtt`:
+## Configuration
 
-    $ ./mac2mqtt
-    2021/04/12 10:37:28 Started
-    2021/04/12 10:37:29 Connected to MQTT
-    2021/04/12 10:37:29 Sending 'true' to topic: mac2mqtt/bessarabov-osx/status/alive
+### Config file path
+
+Please refer to the sample configure file `mac2mqtt.yml` in `sample/`. Alter it to your needs and move it to a
+directory of your choice. The directory where you put the binary `mac2mqtt` with the filename `mac2mqtt.yml` is the
+default. 
+
+Start `mac2mqtt` with the parameter `-c /path/to/your/config_file` to change this behavior.
+
+### Config file syntax and options
+
+The config file is a YAML file. The following options are supported:
+
+| Name              | Purpose                                |
+|:------------------|:---------------------------------------|
+| `mqtt_ip`         | IP or Hostname of your MQTT broker     |
+| `mqtt_port`       | Port where your mqtt broker listens to |
+| `mqtt_user`       | Username for authentification          |
+| `mqtt_password`   | Password for authentication            |
+| `mqtt_base_topic` | MQTT topic to listen on                |
+
+There are **no defaults**, mac2mqtt will just bail and exit, if something essential is missing.
 
 ## Running in the background
 
-You need `mac2mqtt.yaml` and `mac2mqtt` to be placed in the directory `/Users/USERNAME/mac2mqtt/`,
-then you need to create file `/Library/LaunchDaemons/com.bessarabov.mac2mqtt.plist`:
+To run `mac2mqtt` in the background, you need to use a [Launch Daemon](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html#//apple_ref/doc/uid/10000172i-SW7-BCIEDDBJ).
+In `sample/com.bessarabov.mac2mqtt.plist` there is a sample configuration file. Edit it to your needs and move it to `/Library/LaunchDaemons/`
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-    <dict>
-        <key>Label</key>
-        <string>com.bessarabov.mac2mqtt</string>
-        <key>Program</key>
-        <string>/Users/USERNAME/mac2mqtt/mac2mqtt</string>
-        <key>WorkingDirectory</key>
-        <string>/Users/USERNAME/mac2mqtt/</string>
-        <key>RunAtLoad</key>
-        <true/>
-        <key>KeepAlive</key>
-        <true/>
-    </dict>
-</plist>
-```
+    sudo cp sample/com.bessarabov.mac2mqtt.plist /Library/LaunchDaemons/
 
-And run:
+Load the daemon with 
 
     launchctl load /Library/LaunchDaemons/com.bessarabov.mac2mqtt.plist
 
-(To stop you need to run `launchctl unload /Library/LaunchDaemons/com.bessarabov.mac2mqtt.plist`)
+Stop it if necessary with
+
+    launchctl unload /Library/LaunchDaemons/com.bessarabov.mac2mqtt.plist
 
 ## Home Assistant sample config
 
@@ -78,7 +78,7 @@ script:
     sequence:
       - service: mqtt.publish
         data:
-          topic: "mac2mqtt/bessarabov-osx/command/sleep"
+          topic: "mac2mqtt/bessarabov-osx/command"
           payload: "sleep"
 
   air2_shutdown:
@@ -86,7 +86,7 @@ script:
     sequence:
       - service: mqtt.publish
         data:
-          topic: "mac2mqtt/bessarabov-osx/command/shutdown"
+          topic: "mac2mqtt/bessarabov-osx/command"
           payload: "shutdown"
 
   air2_displaysleep:
@@ -94,7 +94,7 @@ script:
     sequence:
       - service: mqtt.publish
         data:
-          topic: "mac2mqtt/bessarabov-osx/command/displaysleep"
+          topic: "mac2mqtt/bessarabov-osx/command"
           payload: "displaysleep"
 
 sensor:
@@ -172,50 +172,51 @@ views:
           - sensor.air2_battery
 ```
 
-## MQTT topics structure
+## MQTT topic structure
 
 The program is working with several MQTT topics. All topix are prefixed with the `mqtt_base_topic` from your `mac2mqtt.yaml` + `COMPUTER_NAME`.
-Setting the `mqtt_base_topic` to `test/mac2mqtt` and the computer hostname is `WOPR`, the topic will be `test/mac2mqtt/WOPR`.
+Setting the `mqtt_base_topic` to `test/mac2mqtt` the topic will be `test/mac2mqtt/`.
 
-`mac2mqtt` send info to the topics `PREFIX/COMPUTER_NAME/status/#` and listen for commands in topics
-`PREFIX/COMPUTER_NAME/command/#`.
+`mac2mqtt` send info to the topics `$mqtt_base_topic/status/#` and listen for commands in topics
+`$mqtt_base_topic/command/#`.
 
-### PREFIX + `/status/alive`
+### `$mqtt_base_topic` + `/status/alive`
 
 There can be `true` of `false` in this topic. If `mac2mqtt` is connected to MQTT server there is `true`.
 If `mac2mqtt` is disconnected from MQTT there is `false`. This is the standard MQTT thing called Last Will and Testament (LWT).
 
-### PREFIX + `/status/volume`
+### `$mqtt_base_topic` + `/status/volume`
 
 The value is the numbers from 0 (inclusive) to 100 (inclusive). The current volume of computer.
 
 The value of this topic is updated every 2 seconds.
 
-### PREFIX + `/status/mute`
+### `$mqtt_base_topic` + `/status/mute`
 
 There can be `true` of `false` in this topic. `true` means that the computer volume is muted (no sound),
 `false` means that it is not multed.
 
-### PREFIX + `/status/battery`
+### `$mqtt_base_topic` + `/status/battery`
 
-The value is the nuber up to 100. The charge percent of the battery.
+The value is the number up to 100. The charge percent of the battery. 
+If the device is powered with mains voltage, `mains` is issued (i.e. for a Mac Studio)
 
 The value of this topic is updated every 60 seconds.
 
-### PREFIX + `/command/volume`
+### `$mqtt_base_topic` + `/command/volume`
 
 You can send integer numberf from 0 (inclusive) to 100 (inclusive) to this topic. It will set the volume on the computer.
 
-### PREFIX + `/command/mute`
+### `$mqtt_base_topic` + `/command/mute`
 
 You can send `true` of `false` to this topic. When you send `true` the computer is muted. When you send `false` the computer
 is unmuted.
 
-### PREFIX + `/command/sleep`
+### `$mqtt_base_topic` + `/command/sleep`
 
 You can send string `sleep` to this topic. It will put computer to sleep mode. Sending some other value will do nothing.
 
-### PREFIX + `/command/shutdown`
+### `$mqtt_base_topic` + `/command/shutdown`
 
 You can send string `shutdown` to this topic. It will try to shutdown the computer. The way it is done depends on
 the user who run the program. If the program is run by `root` the computer will shutdown, but if it is run by ordinary user
@@ -223,11 +224,7 @@ the computer will not shut down if there is other user who logged in.
 
 Sending some other value but `shutdown` will do nothing.
 
-### PREFIX + `/command/displaysleep`
+### `$mqtt_base_topic` + `/command/displaysleep`
 
 You can send string `displaysleep` to this topic. It will turn off display. Sending some other value will do nothing.
 
-
-### PREFIX + `/command/afk`
-
-Lock the screen by sending `afk` to this topic.
