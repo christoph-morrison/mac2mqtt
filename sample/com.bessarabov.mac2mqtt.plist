@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Disabled</key>
+	<false/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>Label</key>
+	<string>com.bessarabov.mac2mqtt</string>
+	<key>Program</key>
+	<string>_PATH_TO_HOMEDIR_/bin/mac2mqtt</string>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>_PATH_TO_HOMEDIR_/mac2mqtt.error.log</string>
+	<key>StandardOutPath</key>
+	<string>_PATH_TO_HOMEDIR_/mac2mqtt.log</string>
+	<key>WorkingDirectory</key>
+	<string>_PATH_TO_HOMEDIR_/bin</string>
+</dict>
+</plist>
+
