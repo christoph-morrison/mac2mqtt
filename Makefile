@@ -1,5 +1,6 @@
 CONFIG_FILE_TARGET	:= $(HOME)/bin/mac2mqtt.yml
 .DEFAULT_GOAL   	:= build
+export PATH := /opt/local/bin:$(PATH)
 
 build:
 
